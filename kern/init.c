@@ -106,7 +106,8 @@ i386_init(void) {
     pic_init();
     rtc_timer_init();
     rtc_timer_pic_interrupt();
-
+    pic_irq_unmask(IRQ_CLOCK);
+    // assert(false);
     /* Framebuffer init should be done after memory init */
     fb_init();
     if (trace_init) cprintf("Framebuffer initialised\n");

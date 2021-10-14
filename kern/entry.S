@@ -66,6 +66,9 @@ save_trapframe:
 .globl sys_yield
 .type  sys_yield, @function
 sys_yield:
+    # LAB 4 code
+    cli
+    # LAB 4 code end
     call save_trapframe_syscall
     call csys_yield
     jmp .
@@ -74,7 +77,9 @@ sys_yield:
 .globl sys_exit
 .type  sys_exit, @function
 sys_exit:
+    # LAB 4 code
     cli
+    # LAB 4 code end
 	leaq bootstacktop(%rip),%rsp
     xor %ebp, %ebp
     call csys_exit
