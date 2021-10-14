@@ -59,23 +59,16 @@ void
 rtc_timer_init(void) {
     // LAB 4: Your code here
     // (use cmos_read8/cmos_write8)
-    outb(CMOS_CMD, CMOS_NMI_LOCK | RTC_AREG);
-    uint8_t areg = inb(CMOS_DATA);
-    outb(CMOS_CMD, CMOS_NMI_LOCK | RTC_AREG);
-    areg |= 0xF;
-    outb(CMOS_DATA, CMOS_NMI_LOCK | areg);
-    outb(CMOS_CMD, CMOS_NMI_LOCK | RTC_BREG);
-    uint8_t breg = inb(CMOS_DATA);
-    breg |= RTC_PIE;
-    outb(CMOS_CMD, CMOS_NMI_LOCK | RTC_BREG);
-    outb(CMOS_DATA, CMOS_NMI_LOCK | breg);
+    uint8_t areg = cmos_read8(RTC_AREG);
+    cmos_write8(RTC_AREG, areg | 0xF);
+    uint8_t breg = cmos_read8(RTC_BREG);
+    cmos_write8(RTC_BREG, breg | RTC_PIE);
 }
 
 uint8_t
 rtc_check_status(void) {
     // LAB 4: Your code here
     // (use cmos_read8)
-    outb(CMOS_CMD, CMOS_NMI_LOCK | RTC_CREG);
-    uint8_t creg = inb(CMOS_DATA);
+    uint8_t creg = cmos_read8(RTC_CREG);
     return creg;
 }
