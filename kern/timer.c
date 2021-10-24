@@ -102,7 +102,7 @@ acpi_find_table(const char *sign) {
         checksum += *((uint8_t *) rsdp + i);
     }
 
-    if (checksum) {
+    if (checksum % 0x100) {
         panic("Checksum is incorrect.\n");
     }
 
@@ -122,11 +122,26 @@ acpi_find_table(const char *sign) {
         }   
     }
 
+    checksum = 0;
+    for (uint32_t i = 0; i < rsdt->h.Length; i++) {
+        checksum += *((uint8_t *) rsdt + i);
+    }
+    if (checksum % 0x100) {
+        panic("Checksum is incorrect.\n");
+    }
+
     for (int i = 0; i < rsdt_len; ++i) {
         uint64_t pa;
         memcpy(&pa, (uint8_t *) rsdt->PointerToOtherSDT + i * pa_size, pa_size);
         ACPISDTHeader *h = mmio_map_region((physaddr_t) pa, sizeof(ACPISDTHeader));
         h = mmio_remap_last_region((physaddr_t) pa, h, sizeof(ACPISDTHeader), h->Length);
+        checksum = 0;
+        for (uint32_t i = 0; i < h->Length; i++) {
+            checksum += *((uint8_t *) h + i);
+        }
+        if (checksum % 0x100) {
+            panic("Checksum is incorrect.\n");
+        }
         if (!strncmp(h->Signature, sign, 4)) {
             return (void *) h;
         }
@@ -296,6 +311,16 @@ hpet_cpu_frequency(void) {
     static uint64_t cpu_freq;
 
     // LAB 5: Your code here
+    uint64_t time_res = 100;
+    uint64_t delta = 0, target = hpetFreq / time_res;
+    uint64_t tick0 = hpet_get_main_cnt();
+    uint64_t tsc0 = read_tsc();
+    do {
+        asm("pause");
+        delta = hpet_get_main_cnt() - tick0;
+    } while (delta < target);
+    uint64_t tsc1 = read_tsc();
+    cpu_freq = (tsc1 - tsc0) * time_res;
 
     return cpu_freq;
 }
@@ -314,6 +339,22 @@ pmtimer_cpu_frequency(void) {
     static uint64_t cpu_freq;
 
     // LAB 5: Your code here
+    uint32_t time_res = 100;
+    uint32_t tick0 = pmtimer_get_timeval();
+    uint64_t delta = 0, target = PM_FREQ / time_res;
+    uint64_t tsc0 = read_tsc();
+    do {
+        asm("pause");
+        uint32_t tick1 = pmtimer_get_timeval();
+        delta = tick1 - tick0;
+        if (-delta <= 0xFFFFFF) {
+            delta += 0xFFFFFF;
+        } else if (tick0 > tick1) {
+            delta += 0xFFFFFFFF;
+        }
+    } while (delta < target);
+    uint64_t tsc1 = read_tsc();
+    cpu_freq = (tsc1 - tsc0) * PM_FREQ / delta;
 
     return cpu_freq;
 }

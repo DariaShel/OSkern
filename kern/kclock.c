@@ -47,7 +47,7 @@ static void
 rtc_timer_pic_interrupt(void) {
     // LAB 4: Your code here
     // Enable PIC interrupts.
-    pic_irq_mask(IRQ_CLOCK);
+    pic_irq_unmask(IRQ_CLOCK);
 }
 
 static void

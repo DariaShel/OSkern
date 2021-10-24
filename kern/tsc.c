@@ -206,31 +206,21 @@ timer_start(const char *name) {
     (void)freq;
 
     //LAB 5: start
-    for (int i = 0; i < MAX_TIMERS; i++) {
-        if (timertab[i].timer_name && !strcmp(timertab[i].timer_name, name)) {
-            timer_id = i;
-            timer_started = 1;
-            timer = read_tsc();
-            freq = timertab[timer_id].get_cpu_freq();
-            return;
-        }
-    }
-
-    print_timer_error();
+    timer_started = 1;
+    timer = read_tsc();
+    timer_cpu_frequency(name);
     //LAB 5: end
 }
 
 void
 timer_stop(void) {
     //LAB 5: start
-    if (!timer_started || timer_id < 0) {
+    if (!timer_started) {
         print_timer_error();
         return;
     }
-
-    print_time((read_tsc() - timer) / freq);
-
-    timer_id = -1;
+    unsigned int sec = (read_tsc() - timer) / freq;
+    print_time(sec);
     timer_started = 0;
     //LAB 5: end
 }
@@ -238,12 +228,11 @@ timer_stop(void) {
 void
 timer_cpu_frequency(const char *name) {
     //LAB 5: start
-    for (int i = 0; i < MAX_TIMERS; i++) {
-        if (timertab[i].timer_name && !strcmp(timertab[i].timer_name, name)) {
-            cprintf("%lu\n", timertab[i].get_cpu_freq());
-            return;
+    for (uint32_t i = 0; i < MAX_TIMERS; i++) {
+        if (!strcmp(name, timertab[i].timer_name)) {
+            freq = timertab[i].get_cpu_freq();
+            timer_id = i;
         }
     }
-    print_timer_error();
     //LAB 5: end
 }
