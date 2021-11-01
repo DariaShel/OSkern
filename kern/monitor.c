@@ -14,6 +14,7 @@
 #include <kern/tsc.h>
 #include <kern/timer.h>
 #include <kern/env.h>
+#include <kern/pmap.h>
 #include <kern/trap.h>
 #include <kern/kclock.h>
 
@@ -29,6 +30,7 @@ int mon_dumpcmos(int argc, char **argv, struct Trapframe *tf);
 int mon_start(int argc, char **argv, struct Trapframe *tf);
 int mon_stop(int argc, char **argv, struct Trapframe *tf);
 int mon_frequency(int argc, char **argv, struct Trapframe *tf);
+int mon_memory(int argc, char **argv, struct Trapframe *tf);
 
 struct Command {
     const char *name;
@@ -46,6 +48,7 @@ static struct Command commands[] = {
         {"timer_start", "Start timer", mon_start},
         {"timer_stop", "Stop timer", mon_stop},
         {"timer_freq", "Count frequency", mon_frequency},
+        {"memory", "Memory", mon_memory},
 };
 #define NCOMMANDS (sizeof(commands) / sizeof(commands[0]))
 
@@ -157,6 +160,15 @@ int mon_frequency(int argc, char **argv, struct Trapframe *tf) {
     return 0;
 }
 // LAB 5: end code
+/* Implement memory (mon_memory) command.
+ * This command should call dump_memory_lists()
+ */
+// LAB 6: Your code here
+int
+mon_memory(int argc, char **argv, struct Trapframe *tf) {
+    dump_memory_lists();
+    return 0;
+}
 /* Kernel monitor command interpreter */
 
 static int
