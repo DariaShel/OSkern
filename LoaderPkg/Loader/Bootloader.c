@@ -906,7 +906,6 @@ TranslateVirtualAddresses (
   IN VOID       *Context
   )
 {
-#ifdef JOS_SUPPORTS_MEMMAP
   EFI_STATUS     Status;
   LOADER_PARAMS  *LoaderParams;
 
@@ -954,7 +953,6 @@ TranslateVirtualAddresses (
   ASSERT_EFI_ERROR (Status);
   Status = gRT->ConvertPointer (EFI_OPTIONAL_PTR, (VOID **)&LoaderParams->StringTableEnd);
   ASSERT_EFI_ERROR (Status);
-#endif
 }
 
 /**
