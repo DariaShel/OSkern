@@ -636,13 +636,12 @@ check_virtual_tree(struct Page *page, int class) {
 void
 dump_virtual_tree(struct Page *node, int class) {
     // LAB 7: Your code here
-    if (node->left) {
-        dump_virtual_tree(node->left, 0);
+    if (!node) {
+        return;
     }
-    cprintf(" (%x, %x, %lx) \n", node->refc, node->class, (unsigned long) node->addr << CLASS_BASE);
-    if (node->right) {
-        dump_virtual_tree(node->right, 0);
-    }
+    dump_virtual_tree(node->left, class - 1);
+    cprintf("refc %x, class %x, addr %lx\n", node->refc, class, (unsigned long) node->addr << CLASS_BASE);
+    dump_virtual_tree(node->right, class - 1);
 }
 
 
@@ -1894,38 +1893,38 @@ init_memory(void) {
     // LAB 7: Your code here
     // Map [FRAMEBUFFER, FRAMEBUFFER + uefi_lp->FrameBufferSize] to
     //     [uefi_lp->FrameBufferBase, uefi_lp->FrameBufferBase + uefi_lp->FrameBufferSize] RW- + PROT_WC
-    if (map_physical_region(&kspace, uefi_lp->FrameBufferBase, FRAMEBUFFER, 
+    if (map_physical_region(&kspace, FRAMEBUFFER, uefi_lp->FrameBufferBase, 
         uefi_lp->FrameBufferSize, PROT_R | PROT_W | PROT_WC)) {
-        panic("Can't map to uefi_lp->FrameBufferBase.");
+        panic("Can't map to FRAMEBUFFER.");
     }
     
     // Map [X86ADDR(KERN_BASE_ADDR),MIN(MAX_LOW_ADDR_KERN_SIZE, max_memory_map_addr)] to
     //     [0, MIN(MAX_LOW_ADDR_KERN_SIZE, max_memory_map_addr)] as RW + ALLOC_WEAK
-    if (map_physical_region(&kspace, 0, X86ADDR(KERN_BASE_ADDR), 
+    if (map_physical_region(&kspace, X86ADDR(KERN_BASE_ADDR), 0, 
         MIN(MAX_LOW_ADDR_KERN_SIZE, max_memory_map_addr), PROT_R | PROT_W | ALLOC_WEAK)) {
-        panic("Can't map to 0.");
+        panic("Can't map to X86ADDR(KERN_BASE_ADDR).");
     }
     
     // Map [X86ADDR((uintptr_t)__text_start),ROUNDUP(X86ADDR((uintptr_t)__text_end), CLASS_SIZE(0))] to
     //     [PADDR(__text_start), ROUNDUP(__text_end, CLASS_SIZE(0))] as R-X
-    if (map_physical_region(&kspace, PADDR(__text_start), X86ADDR((uintptr_t)__text_start), 
+    if (map_physical_region(&kspace, X86ADDR((uintptr_t)__text_start), PADDR(__text_start), 
         ROUNDUP(X86ADDR((uintptr_t)__text_end), CLASS_SIZE(0)) - X86ADDR((uintptr_t)__text_start), 
         PROT_R | PROT_X)) {
-        panic("Can't map to PADDR(__text_start).");
+        panic("Can't map to X86ADDR((uintptr_t)__text_start).");
     }
     
     // Map [X86ADDR(KERN_STACK_TOP - KERN_STACK_SIZE), KERN_STACK_TOP] to
     //     [PADDR(bootstack), PADDR(boottop)] as RW-
-    if (map_physical_region(&kspace, PADDR(bootstack), X86ADDR(KERN_STACK_TOP - KERN_STACK_SIZE), 
+    if (map_physical_region(&kspace, X86ADDR(KERN_STACK_TOP - KERN_STACK_SIZE), PADDR(bootstack), 
         PADDR(bootstacktop) - PADDR(bootstack), PROT_R | PROT_W)) {
-        panic("Can't map to PADDR(bootstack).");
+        panic("Can't map to X86ADDR(KERN_STACK_TOP - KERN_STACK_SIZE).");
     }
     
     // Map [X86ADDR(KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE), KERN_PF_STACK_TOP] to
     //     [PADDR(pfstack), PADDR(pfstacktop)] as RW-
-    if (map_physical_region(&kspace, PADDR(pfstack), X86ADDR(KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE), 
+    if (map_physical_region(&kspace, X86ADDR(KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE), PADDR(pfstack), 
         PADDR(pfstacktop) - PADDR(pfstack), PROT_R | PROT_W)) {
-        panic("Can't map to PADDR(pfstack).");
+        panic("Can't map to X86ADDR(KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE).");
     }
     
 
