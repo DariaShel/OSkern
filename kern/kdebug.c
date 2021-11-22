@@ -28,6 +28,46 @@ load_kernel_dwarf_info(struct Dwarf_Addrs *addrs) {
     addrs->pubtypes_end = (uint8_t *)(uefi_lp->DebugPubtypesEnd);
 }
 
+void
+load_user_dwarf_info(struct Dwarf_Addrs *addrs) {
+    assert(curenv);
+
+    uint8_t *binary = curenv->binary;
+    assert(curenv->binary);
+    (void)binary;
+
+    struct {
+        const uint8_t **end;
+        const uint8_t **start;
+        const char *name;
+    } sections[] = {
+            {&addrs->aranges_end, &addrs->aranges_begin, ".debug_aranges"},
+            {&addrs->abbrev_end, &addrs->abbrev_begin, ".debug_abbrev"},
+            {&addrs->info_end, &addrs->info_begin, ".debug_info"},
+            {&addrs->line_end, &addrs->line_begin, ".debug_line"},
+            {&addrs->str_end, &addrs->str_begin, ".debug_str"},
+            {&addrs->pubnames_end, &addrs->pubnames_begin, ".debug_pubnames"},
+            {&addrs->pubtypes_end, &addrs->pubtypes_begin, ".debug_pubtypes"},
+    };
+    (void)sections;
+
+    memset(addrs, 0, sizeof(*addrs));
+
+    /* Load debug sections from curenv->binary elf image */
+    // LAB 8: Your code here
+    struct Elf *user_elf = (struct Elf *)(binary);
+    struct Secthdr *sect_hdr = (struct Secthdr *)(binary + user_elf->e_shoff);
+    const char *sh_str = (char *)(binary + sect_hdr[user_elf->e_shstrndx].sh_offset);
+    for (size_t i = 0; i < user_elf->e_shnum; i++) {
+        for (size_t j = 0; j < sizeof(sections) / sizeof(*sections); j++) {
+            if (!strcmp(&sh_str[sect_hdr[i].sh_name], sections[j].name)) {
+                *sections[j].start = binary + sect_hdr[i].sh_offset;
+                *sections[j].end = binary + sect_hdr[i].sh_offset + sect_hdr[i].sh_size;
+            }
+        }
+    }
+}
+
 #define UNKNOWN       "<unknown>"
 #define CALL_INSN_LEN 5
 
@@ -49,9 +89,26 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
     info->rip_fn_addr = addr;
     info->rip_fn_narg = 0;
 
+    /* Temporarily load kernel cr3 and return back once done.
+    * Make sure that you fully understand why it is necessary. */
+    // LAB 8: Your code here
+	uintptr_t old_cr3 = curenv->address_space.cr3;
+    if (old_cr3 != kspace.cr3) {
+		lcr3(kspace.cr3);
+	}
+    /* Load dwarf section pointers from either
+     * currently running program binary or use
+     * kernel debug info provided by bootloader
+     * depending on whether addr is pointing to userspace
+     * or kernel space */
+    // LAB 8: Your code here:
+
     struct Dwarf_Addrs addrs;
-    assert(addr >= MAX_USER_READABLE);
-    load_kernel_dwarf_info(&addrs);
+    if (addr < MAX_USER_READABLE) {
+        load_user_dwarf_info(&addrs);
+    } else {
+        load_kernel_dwarf_info(&addrs);
+    }
 
     Dwarf_Off offset = 0, line_offset = 0;
     int res = info_by_address(&addrs, addr, &offset);
@@ -68,6 +125,7 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
     * Hint: use line_for_address from kern/dwarf_lines.c */
 
     // LAB 2: Your res here:
+
     res = line_for_address(&addrs, addr - 5, line_offset, &info->rip_line);
     if (res < 0) goto error;
 
@@ -79,10 +137,11 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
     * string returned by function_by_info will always be */
 
     // LAB 2: Your res here:
+
     res = function_by_info(&addrs, addr - 5, offset, &tmp_buf, &info->rip_fn_addr);
+    if (res < 0) goto error;
     strncpy(info->rip_fn_name, tmp_buf, 256);
     info->rip_fn_namelen = strnlen(info->rip_fn_name, 256);
-    if (res < 0) goto error;
 
 error:
     return res;
@@ -97,14 +156,12 @@ find_function(const char *const fname) {
      * in assembly. */
 
     // LAB 3: Your code here:
+
     struct Dwarf_Addrs addrs;
-    uintptr_t offset = 0;
+    uintptr_t func_offset;
+
     load_kernel_dwarf_info(&addrs);
-    if (address_by_fname(&addrs, fname, &offset) == 0  && offset) {
-        return offset;
-    }
-    if (!naive_address_by_fname(&addrs, fname, &offset)) {
-        return offset;
-    }
+    if (address_by_fname(&addrs, fname, &func_offset) == 0 && func_offset) return func_offset;
+    if (!naive_address_by_fname(&addrs, fname, &func_offset)) return func_offset;
     return 0;
 }

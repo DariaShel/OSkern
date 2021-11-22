@@ -8,6 +8,7 @@
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/env.h>
+#include <kern/syscall.h>
 #include <kern/sched.h>
 #include <kern/kclock.h>
 #include <kern/picirq.h>
@@ -97,14 +98,58 @@ trapname(int trapno) {
 void
 trap_init(void) {
     // LAB 4: Your code here
-
     extern void (*clock_thdlr)(void);
-    // init idt structure
-    idt[IRQ_OFFSET + IRQ_CLOCK] = GATE(0, GD_KT, (uintptr_t)(&clock_thdlr), 0);
-    lidt(&idt_pd);
+	idt[IRQ_OFFSET + IRQ_CLOCK] = GATE(0, GD_KT, (uintptr_t)&clock_thdlr, 0);
     // LAB 5: Your code here
-    idt[IRQ_OFFSET + IRQ_TIMER] = GATE(0, GD_KT, (uintptr_t)(&clock_thdlr), 0);
-    lidt(&idt_pd);
+    idt[IRQ_OFFSET + IRQ_TIMER] = GATE(0, GD_KT, (uintptr_t)&clock_thdlr, 0);
+
+    /* Insert trap handlers into IDT */
+    // LAB 8: Your code here
+	extern void (*thdlr0)(void);
+    idt[T_DIVIDE] = GATE(0, GD_KT, (uint64_t)&thdlr0, 0);
+    extern void (*thdlr1)(void);
+    idt[T_DEBUG] = GATE(0, GD_KT, (uint64_t)&thdlr1, 0);
+    extern void (*thdlr2)(void);
+    idt[T_NMI] = GATE(0, GD_KT, (uint64_t)&thdlr2, 0);
+    extern void (*thdlr3)(void);
+    idt[T_BRKPT] = GATE(0, GD_KT, (uint64_t)&thdlr3, 3);
+    extern void (*thdlr4)(void);
+    idt[T_OFLOW] = GATE(0, GD_KT, (uint64_t)&thdlr4, 0);
+    extern void (*thdlr5)(void);
+    idt[T_BOUND] = GATE(0, GD_KT, (uint64_t)&thdlr5, 0);
+    extern void (*thdlr6)(void);
+    idt[T_ILLOP] = GATE(0, GD_KT, (uint64_t)&thdlr6, 0);
+    extern void (*thdlr7)(void);
+    idt[T_DEVICE] = GATE(0, GD_KT, (uint64_t)&thdlr7, 0);
+    extern void (*thdlr8)(void);
+    idt[T_DBLFLT] = GATE(0, GD_KT, (uint64_t)&thdlr8, 0);
+    extern void (*thdlr10)(void);
+    idt[T_TSS] = GATE(0, GD_KT, (uint64_t)&thdlr10, 0);
+    extern void (*thdlr11)(void);
+    idt[T_SEGNP] = GATE(0, GD_KT, (uint64_t)&thdlr11, 0);
+    extern void (*thdlr12)(void);
+    idt[T_STACK] = GATE(0, GD_KT, (uint64_t)&thdlr12, 0);
+    extern void (*thdlr13)(void);
+    idt[T_GPFLT] = GATE(0, GD_KT, (uint64_t)&thdlr13, 0);
+    extern void (*thdlr14)(void);
+    idt[T_PGFLT] = GATE(0, GD_KT, (uint64_t)&thdlr14, 0);
+    extern void (*thdlr16)(void);
+    idt[T_FPERR] = GATE(0, GD_KT, (uint64_t)&thdlr16, 0);
+    extern void (*thdlr17)(void);
+    idt[T_ALIGN] = GATE(0, GD_KT, (uint64_t)&thdlr17, 0);
+    extern void (*thdlr18)(void);
+    idt[T_MCHK] = GATE(0, GD_KT, (uint64_t)&thdlr18, 0);
+    extern void (*thdlr19)(void);
+    idt[T_SIMDERR] = GATE(0, GD_KT, (uint64_t)&thdlr19, 0);
+    extern void (*thdlr48)(void);
+    idt[T_SYSCALL] = GATE(0, GD_KT, (uint64_t)&thdlr48, 3);
+    /* Setup #PF handler dedicated stack
+     * It should be switched on #PF because
+     * #PF is the only kind of exception that
+     * can legally happen during normal kernel
+     * code execution */
+    idt[T_PGFLT].gd_ist = 1;
+
     /* Per-CPU setup */
     trap_init_percpu();
 }
@@ -210,6 +255,20 @@ print_regs(struct PushRegs *regs) {
 static void
 trap_dispatch(struct Trapframe *tf) {
     switch (tf->tf_trapno) {
+    case T_SYSCALL:
+        tf->tf_regs.reg_rax = syscall(
+                tf->tf_regs.reg_rax,
+                tf->tf_regs.reg_rdx,
+                tf->tf_regs.reg_rcx,
+                tf->tf_regs.reg_rbx,
+                tf->tf_regs.reg_rdi,
+                tf->tf_regs.reg_rsi,
+                tf->tf_regs.reg_r8);
+        return;
+    case T_BRKPT:
+        // LAB 8: Your code here
+        monitor(tf);
+        return;
     case IRQ_OFFSET + IRQ_SPURIOUS:
         /* Handle spurious interrupts
          * The hardware sometimes raises these because of noise on the
@@ -222,11 +281,11 @@ trap_dispatch(struct Trapframe *tf) {
     case IRQ_OFFSET + IRQ_TIMER:
     case IRQ_OFFSET + IRQ_CLOCK:
         // LAB 5: Your code here
-        // timer_for_schedule->handle_interrupts();
-        // sched_yield();
-        hpet_handle_interrupts_tim1();
         // LAB 4: Your code here
-        // rtc_timer_pic_handle();
+        timer_for_schedule->handle_interrupts();
+        rtc_check_status();
+		pic_send_eoi(IRQ_CLOCK);
+		sched_yield();
         return;
     default:
         print_trapframe(tf);
@@ -235,6 +294,9 @@ trap_dispatch(struct Trapframe *tf) {
         env_destroy(curenv);
     }
 }
+
+/* We do not support recursive page faults in-kernel */
+bool in_page_fault;
 
 _Noreturn void
 trap(struct Trapframe *tf) {
@@ -254,6 +316,49 @@ trap(struct Trapframe *tf) {
 
     if (trace_traps) cprintf("Incoming TRAP[%ld] frame at %p\n", tf->tf_trapno, tf);
     if (trace_traps_more) print_trapframe(tf);
+
+    /* #PF should be handled separately */
+    if (tf->tf_trapno == T_PGFLT) {
+        assert(current_space);
+        assert(!in_page_fault);
+        in_page_fault = 1;
+
+        uintptr_t va = rcr2();
+
+#if defined(SANITIZE_USER_SHADOW_BASE) && LAB == 8
+        /* NOTE: Hack!
+         * This is an early user address sanitizer memory allocation
+         * hook until proper memory allocation syscalls
+         * and userspace pagefault handlers are implemented */
+        if ((tf->tf_err & ~FEC_W) == FEC_U && curenv && SANITIZE_USER_SHADOW_BASE <= va &&
+            va < SANITIZE_USER_SHADOW_BASE + SANITIZE_USER_SHADOW_SIZE) {
+            int res = map_region(&curenv->address_space, ROUNDDOWN(va, PAGE_SIZE),
+                                 NULL, 0, PAGE_SIZE, ALLOC_ONE | PROT_R | PROT_W | PROT_USER_);
+            assert(!res);
+        }
+#endif
+
+        /* If #PF was caused by write it can be lazy copying/allocation (fast path)
+         * It is required to be handled here because of in-kernel page faults
+         * which can happen with curenv == NULL */
+
+        /* Read processor's CR2 register to find the faulting address */
+        int res = force_alloc_page(current_space, va, MAX_ALLOCATION_CLASS);
+        if (trace_pagefaults) {
+            bool can_redir = false;
+            cprintf("<%p> Page fault ip=%08lX va=%08lX err=%c%c%c%c%c -> %s\n", current_space, tf->tf_rip, va,
+                    tf->tf_err & FEC_P ? 'P' : '-',
+                    tf->tf_err & FEC_U ? 'U' : '-',
+                    tf->tf_err & FEC_W ? 'W' : '-',
+                    tf->tf_err & FEC_R ? 'R' : '-',
+                    tf->tf_err & FEC_I ? 'I' : '-',
+                    res ? can_redir ? "redirected to user" : "fault" : "resolved by kernel");
+        }
+        if (!res) {
+            in_page_fault = 0;
+            env_pop_tf(tf);
+        }
+    }
 
     assert(curenv);
 

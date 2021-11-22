@@ -17,15 +17,16 @@
 #include <kern/pmap.h>
 #include <kern/trap.h>
 #include <kern/kclock.h>
+#include <kern/pmap.h>
 
 #define WHITESPACE "\t\r\n "
 #define MAXARGS    16
 
 /* Functions implementing monitor commands */
-int mon_hello(int argc, char **argv, struct Trapframe *tf);
 int mon_help(int argc, char **argv, struct Trapframe *tf);
 int mon_kerninfo(int argc, char **argv, struct Trapframe *tf);
 int mon_backtrace(int argc, char **argv, struct Trapframe *tf);
+int mon_hello(int argc, char **argv, struct Trapframe *tf);
 int mon_dumpcmos(int argc, char **argv, struct Trapframe *tf);
 int mon_start(int argc, char **argv, struct Trapframe *tf);
 int mon_stop(int argc, char **argv, struct Trapframe *tf);
@@ -42,27 +43,21 @@ struct Command {
 };
 
 static struct Command commands[] = {
-        {"hello", "Display welcome message", mon_hello},
         {"help", "Display this list of commands", mon_help},
         {"kerninfo", "Display information about the kernel", mon_kerninfo},
         {"backtrace", "Print stack backtrace", mon_backtrace},
+        {"hello", "Print Hello, World!", mon_hello},
         {"dumpcmos", "Print CMOS contents", mon_dumpcmos},
         {"timer_start", "Start timer", mon_start},
-        {"timer_stop", "Stop timer", mon_stop},
-        {"timer_freq", "Count frequency", mon_frequency},
-        {"memory", "Memory", mon_memory},
-        {"virtual_memory", "Dump virtual tree", mon_virt},
-        {"page_table", "Dump page table", mon_pagetable},
+		{"timer_stop", "Stop timer", mon_stop},
+		{"timer_freq", "Count processor frequency", mon_frequency},
+		{"memory", "Dump memory lists", mon_memory},
+		{"pagetable", "Dump page table", mon_pagetable},
+		{"virt", "Dump virtual list", mon_virt}
 };
 #define NCOMMANDS (sizeof(commands) / sizeof(commands[0]))
 
 /* Implementations of basic kernel monitor commands */
-
-int
-mon_hello(int argc, char **argv, struct Trapframe *tf) {
-    cprintf("Hello:)\n");
-    return 0;
-}
 
 int
 mon_help(int argc, char **argv, struct Trapframe *tf) {
@@ -86,88 +81,101 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf) {
 }
 
 int
-mon_backtrace(int argc, char **argv, struct Trapframe *tf) {
-    // LAB 2: Your code here
-    uint64_t *rbp = 0x0;
-    uint64_t rip  = 0x0;
-
-    struct Ripdebuginfo info;
-    typedef long unsigned int lui;
-
-    cprintf("Stack backtrace:\n");
-    rbp = (uint64_t *)read_rbp();
-    rip = rbp[1];
-
-    if (rbp == 0x0 || rip == 0x0) {
-        cprintf("JOS: ERR: Couldn't obtain backtrace...\n");
-        return -1;
-    }
-
-    do {
-        rip = rbp[1];
-        debuginfo_rip(rip, &info);
-
-        cprintf("  rbp %016lx  rip %016lx\n", (lui)rbp, (lui)rip);
-        cprintf("         %.256s:%d: %.*s+%ld\n", info.rip_file, info.rip_line,
-                info.rip_fn_namelen, info.rip_fn_name, (rip - info.rip_fn_addr));
-
-        rbp = (uint64_t *)rbp[0];
-
-    } while (rbp);
-
+mon_hello(int argc, char **argv, struct Trapframe *tf) {
+    cprintf("Hello, world!\n");
     return 0;
 }
 
 int
+mon_backtrace(int argc, char **argv, struct Trapframe *tf) {
+   uint64_t *RBP = 0x0;
+   uint64_t RIP  = 0x0;
+   struct Ripdebuginfo debug_info;
+   cprintf("Stack backtrace:\n");
+   RBP = (uint64_t *) read_rbp();
+   RIP = RBP[1];
+   if (RIP == 0x0 || RBP == 0x0) {
+       cprintf("JOS: ERR: Couldn't obtain backtrace...\n");
+       return -1;
+   }
+   do {
+       RIP = RBP[1];
+       debuginfo_rip(RIP, &debug_info);
+       cprintf("  rbp %016lx  rip %016lx\n", (long unsigned int) RBP,
+               (long unsigned int) RIP);
+       cprintf("         %.256s:%d: %.*s+%ld\n", debug_info.rip_file,
+               debug_info.rip_line,
+               debug_info.rip_fn_namelen,
+               debug_info.rip_fn_name,
+               (RIP - debug_info.rip_fn_addr));
+       RBP = (uint64_t *) RBP[0];
+   } while (RBP);
+   return 0;
+}
+
+int
 mon_dumpcmos(int argc, char **argv, struct Trapframe *tf) {
-    // Dump CMOS memory in the following format:
-    // 00: 00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF
-    // 10: 00 ..
-    // Make sure you understand the values read.
-    // Hint: Use cmos_read8()/cmos_write8() functions.
-    // LAB 4: Your code here
-    size_t offset = 0x0;
-    for (size_t i = CMOS_START; i < CMOS_SIZE + CMOS_START; ++i) {
-        if (offset % 0x10 == 0) {
-            if (offset) {
-                cprintf("\n");
-            }
-            cprintf("%02lx: ", offset);
-        }
-        cprintf("%02x ", cmos_read8(i));
-        offset++;
-    }
-    cprintf("\n");
-    return 0;
+   // Dump CMOS memory in the following format:
+   // 00: 00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF
+   // 10: 00 ..
+   // Make sure you understand the values read.
+   // Hint: Use cmos_read8()/cmos_write8() functions.
+   // LAB 4: Your code here
+
+   size_t offset = 0x0;
+
+   for (size_t cms = CMOS_START; cms < CMOS_START + CMOS_SIZE; cms++) {
+       if (offset % 0x10 == 0) {
+           if (offset) {
+               cprintf("\n");
+           }
+           cprintf("%02lx: ", offset);
+       }
+       ++offset;
+       cprintf("%02x ", cmos_read8(cms));
+   }
+   cprintf("\n");
+
+   return 0;
 }
 
 /* Implement timer_start (mon_start), timer_stop (mon_stop), timer_freq (mon_frequency) commands. */
 // LAB 5: Your code here:
-int mon_start(int argc, char **argv, struct Trapframe *tf) {
-    if (argc != 2) {
-        return 1;
-    }
-    timer_start(argv[1]);
-    return 0;
+
+int
+mon_start(int argc, char **argv, struct Trapframe *tf) {
+   if (argc != 2) {
+       return 1;
+   }
+   timer_start(argv[1]);
+
+   return 0;
 }
 
-int mon_stop(int argc, char **argv, struct Trapframe *tf) {
-    timer_stop();
-    return 0;
+int
+mon_stop(int argc, char **argv, struct Trapframe *tf) {
+   timer_stop();
+
+   return 0;
 }
 
-int mon_frequency(int argc, char **argv, struct Trapframe *tf) {
-    if (argc != 2) {
-        return 1;
-    }
-    timer_cpu_frequency(argv[1]);
-    return 0;
+int
+mon_frequency(int argc, char **argv, struct Trapframe *tf) {
+   if (argc != 2) {
+       return 1;
+   }
+   timer_cpu_frequency(argv[1]);
+
+   return 0;
 }
-// LAB 5: end code
+
+// LAB 5: End code.
+
 /* Implement memory (mon_memory) command.
  * This command should call dump_memory_lists()
  */
 // LAB 6: Your code here
+
 int
 mon_memory(int argc, char **argv, struct Trapframe *tf) {
     dump_memory_lists();
@@ -193,47 +201,47 @@ mon_pagetable(int argc, char **argv, struct Trapframe *tf) {
 
 static int
 runcmd(char *buf, struct Trapframe *tf) {
-    int argc = 0;
-    char *argv[MAXARGS];
+   int argc = 0;
+   char *argv[MAXARGS];
 
-    argv[0] = NULL;
+   argv[0] = NULL;
 
-    /* Parse the command buffer into whitespace-separated arguments */
-    for (;;) {
-        /* gobble whitespace */
-        while (*buf && strchr(WHITESPACE, *buf)) *buf++ = 0;
-        if (!*buf) break;
+   /* Parse the command buffer into whitespace-separated arguments */
+   for (;;) {
+       /* gobble whitespace */
+       while (*buf && strchr(WHITESPACE, *buf)) *buf++ = 0;
+       if (!*buf) break;
 
-        /* save and scan past next arg */
-        if (argc == MAXARGS - 1) {
-            cprintf("Too many arguments (max %d)\n", MAXARGS);
-            return 0;
-        }
-        argv[argc++] = buf;
-        while (*buf && !strchr(WHITESPACE, *buf)) buf++;
-    }
-    argv[argc] = NULL;
+       /* save and scan past next arg */
+       if (argc == MAXARGS - 1) {
+           cprintf("Too many arguments (max %d)\n", MAXARGS);
+           return 0;
+       }
+       argv[argc++] = buf;
+       while (*buf && !strchr(WHITESPACE, *buf)) buf++;
+   }
+   argv[argc] = NULL;
 
-    /* Lookup and invoke the command */
-    if (!argc) return 0;
-    for (size_t i = 0; i < NCOMMANDS; i++) {
-        if (strcmp(argv[0], commands[i].name) == 0)
-            return commands[i].func(argc, argv, tf);
-    }
+   /* Lookup and invoke the command */
+   if (!argc) return 0;
+   for (size_t i = 0; i < NCOMMANDS; i++) {
+       if (strcmp(argv[0], commands[i].name) == 0)
+           return commands[i].func(argc, argv, tf);
+   }
 
-    cprintf("Unknown command '%s'\n", argv[0]);
-    return 0;
+   cprintf("Unknown command '%s'\n", argv[0]);
+   return 0;
 }
 
 void
 monitor(struct Trapframe *tf) {
 
-    cprintf("Welcome to the JOS kernel monitor!\n");
-    cprintf("Type 'help' for a list of commands.\n");
+   cprintf("Welcome to the JOS kernel monitor!\n");
+   cprintf("Type 'help' for a list of commands.\n");
 
-    if (tf) print_trapframe(tf);
+   if (tf) print_trapframe(tf);
 
-    char *buf;
-    do buf = readline("K> ");
-    while (!buf || runcmd(buf, tf) >= 0);
+   char *buf;
+   do buf = readline("K> ");
+   while (!buf || runcmd(buf, tf) >= 0);
 }
