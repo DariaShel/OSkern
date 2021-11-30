@@ -113,8 +113,21 @@ devfile_read(struct Fd *fd, void *buf, size_t n) {
    * system server. */
 
     // LAB 10: Your code here:
+    // fsipcbuf.read.req_fileid = fd->fd_file.id;
+    // fsipcbuf.read.req_n = n;
+    // int num = fsipc(FSREQ_READ, buf);
 
-    return 0;
+    // return num;
+    int r;
+    fsipcbuf.read.req_fileid = fd->fd_file.id;
+    fsipcbuf.read.req_n      = n;
+    if ((r = fsipc(FSREQ_READ, NULL)) < 0) {
+        return r;
+    }
+    assert(r <= n);
+    assert(r <= PAGE_SIZE);
+    memmove(buf, &fsipcbuf, r);
+    return r;
 }
 
 /* Write at most 'n' bytes from 'buf' to 'fd' at the current seek position.
@@ -129,8 +142,10 @@ devfile_write(struct Fd *fd, const void *buf, size_t n) {
    * remember that write is always allowed to write *fewer*
    * bytes than requested. */
     // LAB 10: Your code here:
-
-    return 0;
+    fsipcbuf.write.req_n = MIN(n, sizeof(fsipcbuf.write.req_buf));
+    fsipcbuf.write.req_fileid = fd->fd_file.id;
+    memmove(fsipcbuf.write.req_buf, buf, fsipcbuf.write.req_n);
+    return fsipc(FSREQ_WRITE, NULL);
 }
 
 /* Get file information */
