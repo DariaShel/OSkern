@@ -16,7 +16,6 @@ entry:
 
     # Save LoadParams in uefi_lp.
     movq %rcx, uefi_lp(%rip)
-
     # Invoke C code
     call i386_init
     # Should never reach this place
@@ -45,6 +44,7 @@ save_trapframe_syscall:
     # fallthrough
 
 save_trapframe:
+	cli
     # Guard to avoid hard to debug errors due to cli misusage.
     orl $FL_IF, saved_rflags(%rip)
 
@@ -66,9 +66,7 @@ save_trapframe:
 .globl sys_yield
 .type  sys_yield, @function
 sys_yield:
-    # LAB 4 code
-    cli
-    # LAB 4 code end
+	cli
     call save_trapframe_syscall
     call csys_yield
     jmp .
@@ -77,10 +75,8 @@ sys_yield:
 .globl sys_exit
 .type  sys_exit, @function
 sys_exit:
-    # LAB 4 code
-    cli
-    # LAB 4 code end
-	leaq bootstacktop(%rip),%rsp
+	cli
+    leaq bootstacktop(%rip), %rsp
     xor %ebp, %ebp
     call csys_exit
     jmp .

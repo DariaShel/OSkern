@@ -145,10 +145,6 @@ i386_init(void) {
     init_memory();
 
     pic_init();
-    rtc_timer_init();
-    // rtc_timer_pic_interrupt();
-    // pic_irq_unmask(IRQ_CLOCK);
-    // assert(false);
     timers_init();
 
     /* Framebuffer init should be done after memory init */
@@ -180,9 +176,12 @@ i386_init(void) {
     ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
     /* Touch all you want. */
-    ENV_CREATE(user_testfile, ENV_TYPE_USER);
+    ENV_CREATE(user_icode, ENV_TYPE_USER);
 #endif /* TEST* */
 #endif
+
+    /* Should not be necessary - drains keyboard because interrupt has given up. */
+    kbd_intr();
 
     /* Schedule and run the first user environment! */
     sched_yield();

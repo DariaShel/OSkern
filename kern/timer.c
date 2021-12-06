@@ -87,73 +87,74 @@ acpi_find_table(const char *sign) {
      * HINT: RSDP address is stored in uefi_lp->ACPIRoot
      * HINT: You may want to distunguish RSDT/XSDT
      */
-
     // LAB 5: Your code here
-    static RSDP *rsdp = NULL;
-    if (!rsdp) {
-        if (!uefi_lp->ACPIRoot) {
-            panic("No rsdp.\n");
-        }
-        rsdp = mmio_map_region((physaddr_t) get_rsdp(), sizeof(RSDP));
-        rsdp = mmio_remap_last_region((physaddr_t) get_rsdp(), rsdp, sizeof(RSDP), rsdp->Length);
-    }
-
-    uint64_t checksum = 0;
-    for (int i = 0; i < rsdp->Length; ++i) {
-        checksum += *((uint8_t *) rsdp + i);
-    }
-
-    if (checksum % 0x100) {
-        panic("Checksum is incorrect.\n");
-    }
-
-    static RSDT *rsdt = NULL;
-    static uint32_t rsdt_len, pa_size;
+    static RSDT *rsdt;
+    static size_t rsdt_len;
+    static size_t rsdt_entsz;
+    uint64_t rsdt_pa;
+    size_t i = 0;
+    uint8_t err = 0;
+    uint64_t fadt_pa = 0;
     if (!rsdt) {
-        if (rsdp->Revision){
-            rsdt = mmio_map_region((physaddr_t) rsdp->XsdtAddress, sizeof(RSDT));
-            rsdt = mmio_remap_last_region((physaddr_t) rsdp->XsdtAddress, rsdt, sizeof(RSDT), rsdt->h.Length);
-            rsdt_len = (rsdt->h.Length - sizeof(RSDT)) / 8;
-            pa_size = 8;
+        if (!uefi_lp->ACPIRoot) {
+            panic("No rsdp\n");
+        }
+        RSDP *rsdp = mmio_map_region(uefi_lp->ACPIRoot, sizeof(RSDP));
+        if (!rsdp->Revision) {
+            for (i = 0; i < offsetof(RSDP, Length); i++) {
+                err += ((uint8_t *)rsdp)[i];
+            }
+            if (err) {
+                panic("Invalid RSDP\n");
+            }
+            rsdt_pa = rsdp->RsdtAddress;
+            rsdt_entsz = 4;
         } else {
-            rsdt = mmio_map_region((physaddr_t) rsdp->RsdtAddress, sizeof(RSDT));
-            rsdt = mmio_remap_last_region((physaddr_t) rsdp->RsdtAddress, rsdt, sizeof(RSDT), rsdt->h.Length);
+            for (i = 0; i < rsdp->Length; i++) {
+                err += ((uint8_t *)rsdp)[i];
+            }
+            if (err) {
+                panic("Invalid RSDP\n");
+            }
+            rsdt_pa = rsdp->XsdtAddress;
+            rsdt_entsz = 8;
+        }
+        rsdt = mmio_map_region(rsdt_pa, sizeof(RSDT));
+        rsdt = mmio_remap_last_region(rsdt_pa, rsdt, sizeof(RSDP), rsdt->h.Length);
+        for (i = 0; i < rsdt->h.Length; i++) {
+            err += ((uint8_t *)rsdt)[i];
+        }
+        if (err) {
+            panic("Invalid RSDP\n");
+        }
+        if (!rsdp->Revision) {
+            if (strncmp(rsdt->h.Signature, "RSDT", 4)) {
+                panic("Invalid RSDT\n");
+            }
             rsdt_len = (rsdt->h.Length - sizeof(RSDT)) / 4;
-            pa_size = 4;
-        }   
-    }
-
-    checksum = 0;
-    for (uint32_t i = 0; i < rsdt->h.Length; i++) {
-        checksum += *((uint8_t *) rsdt + i);
-    }
-    if (checksum % 0x100) {
-        panic("Checksum is incorrect.\n");
-    }
-
-    for (int i = 0; i < rsdt_len; ++i) {
-        uint64_t pa;
-        memcpy(&pa, (uint8_t *) rsdt->PointerToOtherSDT + i * pa_size, pa_size);
-        ACPISDTHeader *h = mmio_map_region((physaddr_t) pa, sizeof(ACPISDTHeader));
-        h = mmio_remap_last_region((physaddr_t) pa, h, sizeof(ACPISDTHeader), h->Length);
-        checksum = 0;
-        for (uint32_t i = 0; i < h->Length; i++) {
-            checksum += *((uint8_t *) h + i);
-        }
-        if (checksum % 0x100) {
-            panic("Checksum is incorrect.\n");
-        }
-        if (!strncmp(h->Signature, sign, 4)) {
-            return (void *) h;
+        } else {
+            if (strncmp(rsdt->h.Signature, "XSDT", 4)) {
+                panic("Invalid RSDT\n");
+            }
+            rsdt_len = (rsdt->h.Length - sizeof(RSDT)) / 8;
         }
     }
-
+    ACPISDTHeader *head = NULL;
+    for (i = 0; i < rsdt_len; i++) {
+        memcpy(&fadt_pa, (uint8_t *)rsdt->PointerToOtherSDT + i * rsdt_entsz, rsdt_entsz);
+        head = mmio_map_region(fadt_pa, sizeof(ACPISDTHeader));
+        head = mmio_remap_last_region(fadt_pa, head, sizeof(ACPISDTHeader), rsdt->h.Length);
+        for (size_t i = 0; i < head->Length; i++) {
+            err += ((uint8_t *)head)[i];
+        }
+        if (err) {
+            panic("Invalid ACPI table '%.4s'", head->Signature);
+        }
+        if (!strncmp(head->Signature, sign, 4)) {
+            return head;
+        }
+    }
     return NULL;
-}
-
-RSDP *
-get_rsdp(void) {
-    return(RSDP *) uefi_lp->ACPIRoot;
 }
 
 /* Obtain and map FADT ACPI table address. */
@@ -163,10 +164,9 @@ get_fadt(void) {
     // (use acpi_find_table)
     // HINT: ACPI table signatures are
     //       not always as their names
-
-    static FADT *kfadt;
-    kfadt = (FADT *) acpi_find_table("FACP");
-    return kfadt;
+    static FADT *fadt;
+    fadt = acpi_find_table("FACP");
+    return fadt;
 }
 
 /* Obtain and map RSDP ACPI table address. */
@@ -174,10 +174,9 @@ HPET *
 get_hpet(void) {
     // LAB 5: Your code here
     // (use acpi_find_table)
-
-    static HPET *khpet;
-    khpet = (HPET *) acpi_find_table("HPET");
-    return khpet;
+    static HPET *hpet;
+    hpet = acpi_find_table("HPET");
+    return hpet;
 }
 
 /* Getting physical HPET timer address from its table. */
@@ -278,9 +277,10 @@ void
 hpet_enable_interrupts_tim0(void) {
     // LAB 5: Your code here
     hpetReg->GEN_CONF |= HPET_LEG_RT_CNF;
-    hpetReg->TIM0_CONF = (IRQ_TIMER << 9) | HPET_TN_TYPE_CNF | HPET_TN_INT_ENB_CNF | HPET_TN_VAL_SET_CNF;
-    hpetReg->TIM0_COMP = hpet_get_main_cnt() + Peta / 2 / hpetFemto;
-    hpetReg->TIM0_COMP = Peta / 2 / hpetFemto;
+    hpetReg->TIM0_CONF = (IRQ_TIMER << 9); 
+    hpetReg->TIM0_CONF |= HPET_TN_TYPE_CNF | HPET_TN_INT_ENB_CNF | HPET_TN_VAL_SET_CNF;
+    hpetReg->TIM0_COMP = hpet_get_main_cnt() + Peta / hpetFemto / 2;
+    hpetReg->TIM0_COMP = Peta / hpetFemto / 2;
     pic_irq_unmask(IRQ_TIMER);
 }
 
@@ -288,9 +288,10 @@ void
 hpet_enable_interrupts_tim1(void) {
     // LAB 5: Your code here
     hpetReg->GEN_CONF |= HPET_LEG_RT_CNF;
-    hpetReg->TIM1_CONF = (IRQ_CLOCK << 9) | HPET_TN_TYPE_CNF | HPET_TN_INT_ENB_CNF | HPET_TN_VAL_SET_CNF;
-    hpetReg->TIM1_COMP = hpet_get_main_cnt() + 3 * Peta / 2 / hpetFemto;
-    hpetReg->TIM1_COMP = 3 * Peta / 2 / hpetFemto;
+    hpetReg->TIM1_CONF = (IRQ_CLOCK << 9);
+    hpetReg->TIM1_CONF |= HPET_TN_TYPE_CNF | HPET_TN_INT_ENB_CNF | HPET_TN_VAL_SET_CNF;
+    hpetReg->TIM1_COMP = hpet_get_main_cnt() + Peta / hpetFemto / 2 * 3;
+    hpetReg->TIM1_COMP = Peta / hpetFemto / 2 * 3;
     pic_irq_unmask(IRQ_CLOCK);
 }
 
@@ -310,19 +311,16 @@ hpet_handle_interrupts_tim1(void) {
 uint64_t
 hpet_cpu_frequency(void) {
     static uint64_t cpu_freq;
-
     // LAB 5: Your code here
-    uint64_t time_res = 100;
-    uint64_t delta = 0, target = hpetFreq / time_res;
-    uint64_t tick0 = hpet_get_main_cnt();
-    uint64_t tsc0 = read_tsc();
-    do {
-        asm("pause");
-        delta = hpet_get_main_cnt() - tick0;
-    } while (delta < target);
-    uint64_t tsc1 = read_tsc();
-    cpu_freq = (tsc1 - tsc0) * time_res;
-
+    uint64_t first = hpet_get_main_cnt();
+    uint64_t first_tsc = read_tsc();
+    uint64_t next = first;
+    uint64_t eps = hpetFreq / 10;
+    while (next - first < eps) {
+        next = hpet_get_main_cnt();
+    }
+    uint64_t next_tsc = read_tsc();
+    cpu_freq = (next_tsc - first_tsc) * 10;
     return cpu_freq;
 }
 
@@ -338,24 +336,24 @@ pmtimer_get_timeval(void) {
 uint64_t
 pmtimer_cpu_frequency(void) {
     static uint64_t cpu_freq;
-
     // LAB 5: Your code here
-    uint32_t time_res = 100;
-    uint32_t tick0 = pmtimer_get_timeval();
-    uint64_t delta = 0, target = PM_FREQ / time_res;
-    uint64_t tsc0 = read_tsc();
-    do {
-        asm("pause");
-        uint32_t tick1 = pmtimer_get_timeval();
-        delta = tick1 - tick0;
-        if (-delta <= 0xFFFFFF) {
-            delta += 0xFFFFFF;
-        } else if (tick0 > tick1) {
-            delta += 0xFFFFFFFF;
+    uint32_t first = pmtimer_get_timeval();
+    uint64_t first_tsc = read_tsc();
+    uint32_t next = first;
+    uint64_t d = 0;
+    uint64_t eps = PM_FREQ / 10;
+    while (d < eps) {
+        next = pmtimer_get_timeval();
+        if (first - next <= 0xFFFFFF) {
+            d = next - first + 0xFFFFFF;
+        } else if (first - next > 0) {
+            d = next - first + 0xFFFFFFFF;
+        } else {
+            d = next- first;
         }
-    } while (delta < target);
-    uint64_t tsc1 = read_tsc();
-    cpu_freq = (tsc1 - tsc0) * PM_FREQ / delta;
-
+    }
+    uint64_t next_tsc = read_tsc();
+    cpu_freq = (next_tsc - first_tsc) * 10;
     return cpu_freq;
 }
+

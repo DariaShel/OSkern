@@ -18,7 +18,7 @@
 envid_t
 fork(void) {
     // LAB 9: Your code here
-    envid_t envid = sys_exofork();
+	envid_t envid = sys_exofork();
     if (envid < 0)
         return envid;
     if (envid == 0) {

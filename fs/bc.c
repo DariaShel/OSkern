@@ -33,13 +33,14 @@ bc_pgfault(struct UTrapframe *utf) {
      * the disk. */
     // LAB 10: Your code here
     addr = ROUNDDOWN(addr, PAGE_SIZE);
-    if (sys_alloc_region(CURENVID, addr, PAGE_SIZE, PTE_W | PTE_U | PTE_P)) {
-        panic("bc_pgfault error\n");
+    int res = sys_alloc_region(CURENVID, addr, PAGE_SIZE, PROT_RW);
+    if (res < 0) {
+        panic("bc_pgfault.sys_alloc_region failed: %i\n", res);
     }
-    if (ide_read(blockno * BLKSECTS, addr, BLKSECTS)) {
-        panic("bc_pgfault error\n");
+    res = ide_read(blockno * BLKSECTS, addr, BLKSECTS);
+    if (res < 0) {
+        panic("bc_pgfault.ide_read failed: %i\n", res);
     }
-
     return 1;
 }
 
@@ -60,19 +61,19 @@ flush_block(void *addr) {
         panic("reading non-existent block %08x out of %08x\n", blockno, super->s_nblocks);
 
     // LAB 10: Your code here.
-    addr = ROUNDDOWN(addr, PAGE_SIZE);
+	addr = ROUNDDOWN(addr, PAGE_SIZE);
     if (!is_page_present(addr) || !is_page_dirty(addr)) {
         return;
     }
-    if (ide_write(blockno * BLKSECTS, addr, BLKSECTS)) {
-        panic("Error in ide_write\n");
+    int res = ide_write(blockno * BLKSECTS, ROUNDDOWN(addr, PAGE_SIZE), BLKSECTS);
+    if (res < 0) {
+        panic("flush_block.ide_write failed: %i\n", res);
     }
-    if (sys_map_region(CURENVID, addr, CURENVID, addr, BLKSIZE, get_uvpt_entry(addr) & PTE_SYSCALL)) {
-        panic("Error in sys_map_region\n");
+    res = sys_map_region(CURENVID, addr, CURENVID, addr, PAGE_SIZE, get_prot(addr));
+    if (res < 0) {
+        panic("flush_block.sys_map_region failed: %i\n", res);
     }
-
     assert(!is_page_dirty(addr));
-
 }
 
 /* Test that the block cache works, by smashing the superblock and

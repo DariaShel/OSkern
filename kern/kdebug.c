@@ -102,7 +102,6 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
      * depending on whether addr is pointing to userspace
      * or kernel space */
     // LAB 8: Your code here:
-
     struct Dwarf_Addrs addrs;
     if (addr < MAX_USER_READABLE) {
         load_user_dwarf_info(&addrs);
@@ -125,10 +124,11 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
     * Hint: use line_for_address from kern/dwarf_lines.c */
 
     // LAB 2: Your res here:
-
-    res = line_for_address(&addrs, addr - 5, line_offset, &info->rip_line);
-    if (res < 0) goto error;
-
+    int lineno;
+	addr = addr - 5;
+	res = line_for_address(&addrs, addr, line_offset, &lineno);
+	if (res < 0) goto error;
+	info->rip_line = lineno;
     /* Find function name corresponding to given address.
     * Hint: note that we need the address of `call` instruction, but rip holds
     * address of the next instruction, so we should substract 5 from it.
@@ -137,11 +137,10 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
     * string returned by function_by_info will always be */
 
     // LAB 2: Your res here:
-
-    res = function_by_info(&addrs, addr - 5, offset, &tmp_buf, &info->rip_fn_addr);
-    if (res < 0) goto error;
-    strncpy(info->rip_fn_name, tmp_buf, 256);
-    info->rip_fn_namelen = strnlen(info->rip_fn_name, 256);
+	res = function_by_info(&addrs, addr, offset, &tmp_buf, (uintptr_t *)sizeof(char *));
+	if (res < 0) goto error;
+	strncpy(info->rip_fn_name, tmp_buf, 256);
+	info->rip_fn_namelen = strnlen(info->rip_fn_name, 256);
 
 error:
     return res;
@@ -156,12 +155,16 @@ find_function(const char *const fname) {
      * in assembly. */
 
     // LAB 3: Your code here:
-
-    struct Dwarf_Addrs addrs;
-    uintptr_t func_offset;
-
-    load_kernel_dwarf_info(&addrs);
-    if (address_by_fname(&addrs, fname, &func_offset) == 0 && func_offset) return func_offset;
-    if (!naive_address_by_fname(&addrs, fname, &func_offset)) return func_offset;
+    struct Dwarf_Addrs addr;
+	load_kernel_dwarf_info(&addr);
+	uintptr_t offset = 0;
+	if (!address_by_fname(&addr, fname, &offset)) {
+		if (offset) {
+			return offset;
+		}
+	}
+	if (!naive_address_by_fname(&addr, fname, &offset)) {
+		return offset;
+	}
     return 0;
 }

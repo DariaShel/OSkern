@@ -171,7 +171,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
     // LAB 3: Your code here:
     static uintptr_t stack_top = 0x2000000;
     env->env_tf.tf_rsp = stack_top - (env - envs) * 2 * PAGE_SIZE;
-
+    
 #else
     env->env_tf.tf_ds = GD_UD | 3;
     env->env_tf.tf_es = GD_UD | 3;
@@ -465,7 +465,7 @@ env_run(struct Env *env) {
         if (curenv) cprintf("[%08X] env stopped: %s\n", curenv->env_id, state[curenv->env_status]);
         cprintf("[%08X] env started: %s\n", env->env_id, state[env->env_status]);
     }
-
+    
     // LAB 3: Your code here
     // LAB 8: Your code here
     if (curenv) {

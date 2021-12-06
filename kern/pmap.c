@@ -93,8 +93,8 @@ list_init(struct List *list) {
 inline static void __attribute__((always_inline))
 list_append(struct List *list, struct List *new) {
     // LAB 6: Your code here
-    new->next = list->next;
     new->prev = list;
+    new->next = list->next;
     list->next->prev = new;
     list->next = new;
 }
@@ -210,7 +210,7 @@ alloc_child(struct Page *parent, bool right) {
 			new->refc = 0;
 		}
 		new->class = parent->class - 1;
-	}
+	}	
     return new;
 }
 
@@ -451,9 +451,9 @@ attach_region(uintptr_t start, uintptr_t end, enum PageState type) {
     if (end < start || (!((end < IOPHYSMEM && start > 0x1000) || (start > PADDR(end_point))) && type != RESERVED_NODE)) {
         return;
     }
-
+    
     uintptr_t iter = start;
-
+    
     int i, new_class = -1;
     while (iter < end) {
         uintptr_t size = end - iter;
@@ -662,7 +662,7 @@ dump_memory_lists(void) {
         for (uint64_t j = 0; j < num; j++) {
             if ((page = page_lookup(NULL, min_mem_addr + j * cur_size, i, ALLOCATABLE_NODE, 0)) && page->state == ALLOCATABLE_NODE) {
                 cprintf("physical page address: %lx    size: %llu\n", (uint64_t)page->addr << CLASS_BASE, CLASS_SIZE(page->class));
-            }
+            } 
         }
     }
 }
@@ -912,7 +912,7 @@ unmap_page(struct AddressSpace *spc, uintptr_t addr, int class) {
      */
 
     // LAB 7: Your code here
-
+    
     if (!(pd[pdi0] & PTE_P)) {
         return;
 	} else if (pd[pdi0] & PTE_PS) {

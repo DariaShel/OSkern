@@ -65,14 +65,6 @@ platform_abort() {
 static bool
 asan_shadow_allocator(struct UTrapframe *utf) {
     // LAB 9: Your code here
-    if (SHADOW_FOR_ADDRESS(utf->utf_fault_va) >= asan_internal_shadow_start && 
-        SHADOW_FOR_ADDRESS(utf->utf_fault_va) <= asan_internal_shadow_end && !(utf->utf_fault_va >= asan_internal_shadow_start && 
-        utf->utf_fault_va <= asan_internal_shadow_end)) {
-            if (sys_alloc_region(sys_getenvid(), SHADOW_FOR_ADDRESS(utf->utf_fault_va), PAGE_SIZE, ALLOC_ONE | PROT_RW) < 0) {
-                return 0;
-            }
-            return 1;
-        }
     return 0;
 }
 #endif
@@ -90,8 +82,6 @@ static int
 asan_unpoison_shared_region(void *start, void *end, void *arg) {
     (void)start, (void)end, (void)arg;
     // LAB 8: Your code here
-
-    platform_asan_poison(start, end - start);
     return 0;
 }
 
@@ -131,8 +121,7 @@ platform_asan_init() {
     /* 4. Shared pages
      * HINT: Use foreach_shared_region() with asan_unpoison_shared_region() */
     // LAB 8: Your code here
-
-    foreach_shared_region(asan_unpoison_shared_region, NULL);
+    
 }
 
 
