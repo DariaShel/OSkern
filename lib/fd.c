@@ -111,6 +111,7 @@ static struct Dev *devtab[] = {
         &devfile,
         &devpipe,
         &devcons,
+        &devfifo,
         NULL};
 
 int

@@ -155,7 +155,8 @@ devfile_stat(struct Fd *fd, struct Stat *st) {
     strcpy(st->st_name, fsipcbuf.statRet.ret_name);
     st->st_size = fsipcbuf.statRet.ret_size;
     st->st_isdir = fsipcbuf.statRet.ret_isdir;
-
+    st->st_isfifo = fsipcbuf.statRet.ret_isfifo;
+    
     return 0;
 }
 
