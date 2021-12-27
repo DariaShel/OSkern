@@ -28,7 +28,7 @@ enum {
     E_NOT_EXEC = 18,    /* File not a valid executable */
     E_NOT_SUPP = 19,    /* Operation not supported */
     E_FIFO	      = 20,	/* Fifo wait */
-	E_FIFO_CLOSE  = 21	/* No readers or writers of Fifo */
+	E_FIFO_CLOSE  = 21,	/* No readers or writers of Fifo */
     MAXERROR
 };
 
