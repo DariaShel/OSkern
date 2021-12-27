@@ -109,6 +109,7 @@ union Fsipc {
         size_t req_n;
     } read;
     struct Fsret_read {
+        int ret_n;
         char ret_buf[PAGE_SIZE];
     } readRet;
     struct Fsreq_write {
@@ -134,7 +135,7 @@ union Fsipc {
     struct Fsret_write {
 		int ret_n;
 	} writeRet;
-    
+
     struct Fsreq_create_fifo {
 		char req_path[MAXPATHLEN];
 	} create_fifo;
