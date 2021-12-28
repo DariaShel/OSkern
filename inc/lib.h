@@ -134,6 +134,9 @@ int dup(int oldfd, int newfd);
 int fstat(int fd, struct Stat *statbuf);
 int stat(const char *path, struct Stat *statbuf);
 
+/* fifo.c */
+int mkfifo(const char *path);
+
 /* file.c */
 int open(const char *path, int mode);
 int ftruncate(int fd, off_t size);

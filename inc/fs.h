@@ -110,7 +110,7 @@ union Fsipc {
     } read;
     struct Fsret_read {
         int ret_n;
-        char ret_buf[PAGE_SIZE];
+        char ret_buf[PAGE_SIZE - sizeof(int)];
     } readRet;
     struct Fsreq_write {
         int req_fileid;
