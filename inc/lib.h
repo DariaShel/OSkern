@@ -22,6 +22,7 @@
 #include <inc/fd.h>
 #include <inc/args.h>
 
+#include <inc/sig.h>
 #ifdef SANITIZE_USER_SHADOW_BASE
 /* asan unpoison routine used for whitelisting regions. */
 void platform_asan_unpoison(void *, size_t);
@@ -95,6 +96,10 @@ int sys_ipc_try_send(envid_t to_env, uint64_t value, void *pg, size_t size, int 
 int sys_ipc_recv(void *rcv_pg, size_t size);
 int sys_gettime(void);
 
+int sys_sigqueue(int pid, int signo, const union sigval value);
+int sys_sigwait(const sigset_t* set, int* sig);
+int sys_sigaction(int sig, const struct sigaction* act, struct sigaction* oact);
+
 int vsys_gettime(void);
 
 /* This must be inlined. Exercise for reader: why? */
@@ -156,6 +161,7 @@ int pipeisclosed(int pipefd);
 
 /* wait.c */
 void wait(envid_t env);
+
 
 /* File open modes */
 #define O_RDONLY  0x0000 /* open for reading only */

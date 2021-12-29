@@ -6,6 +6,7 @@
 #include <inc/types.h>
 #include <inc/trap.h>
 #include <inc/memlayout.h>
+#include <inc/sig.h>
 
 typedef int32_t envid_t;
 
@@ -75,13 +76,16 @@ struct Env {
     /* Exception handling */
     void *env_pgfault_upcall; /* Page fault upcall entry point */
 
-    /* LAB 9 IPC */
+    /*LAB 9 IPC*/
     bool env_ipc_recving;    /* Env is blocked receiving */
     uintptr_t env_ipc_dstva; /* VA at which to map received page */
     size_t env_ipc_maxsz;    /* maximal size of received region */
     uint32_t env_ipc_value;  /* Data value sent to us */
     envid_t env_ipc_from;    /* envid of the sender */
     int env_ipc_perm;        /* Perm of page mapping received */
+
+    /*Signals*/
+    struct sigaction Sig_Desc_Table[NUM_SIG];
 };
 
 #endif /* !JOS_INC_ENV_H */

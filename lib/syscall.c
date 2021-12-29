@@ -147,3 +147,19 @@ int
 sys_gettime(void) {
     return syscall(SYS_gettime, 0, 0, 0, 0, 0, 0, 0);
 }
+
+int
+sys_sigqueue(int eid, int signo, const union sigval value){
+    int ret = syscall(SYS_sigqueue, 0, eid, signo, (uintptr_t)(value.sival_int), 0, 0, 0);
+    return ret;
+}
+
+int
+sys_sigwait(const sigset_t* set, int* sig){
+    return syscall(SYS_sigwait, 0, (uintptr_t)set, (uintptr_t)sig, 0, 0, 0, 0);
+}
+
+int
+sys_sigaction(int sig, const struct sigaction* act, struct sigaction* oact){
+    return syscall(SYS_sigaction, 0, sig, (uintptr_t)act, (uintptr_t)oact, 0, 0, 0);
+}

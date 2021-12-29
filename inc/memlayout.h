@@ -40,7 +40,7 @@
  *                     | - - - - - - - - - - - - - - -|                   |
  *                     |      Invalid Memory (*)      | --/--  KERN_STACK_GAP    |
  *                     +------------------------------+                   |
- *    KERN_PF_STACK_TOP      |       CPU0's #PF Stack       | RW/--  KERN_PF_STACK_SIZE |
+ *KERN_PF_STACK_TOP    |       CPU0's #PF Stack       | RW/--  KERN_PF_STACK_SIZE |
  *                     | - - - - - - - - - - - - - - -|                   |
  *                     |      Invalid Memory (*)      | --/--  KERN_STACK_GAP    |
  *                     +------------------------------+                   |
@@ -52,8 +52,8 @@
  *                     :              .               :                   |
  *  KERN_HEAP_END -->  +------------------------------+ 0x803fe00000    --+
  *                     |       Memory-mapped I/O      | RW/--  HUGE_PAGE_SIZE
- * MAX_USER_READABLE, KERN_HEAP_START -->  +------------------------------+ 0x803fc00000
- *                     |          RO PAGES            | R-/R-
+ *MAX_USER_READABLE,-->+------------------------------+ 0x803fc00000
+ *KERN_HEAP_START      |          RO PAGES            | R-/R-
  *                     .                              .
  *                     .                              .        400 * HUGE_PAGE_SIZE
  *                     .                              .

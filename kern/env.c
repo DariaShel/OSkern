@@ -7,6 +7,7 @@
 #include <inc/assert.h>
 #include <inc/elf.h>
 #include <inc/vsyscall.h>
+#include <inc/sig.h>
 
 #include <kern/env.h>
 #include <kern/pmap.h>
@@ -18,6 +19,7 @@
 #include <kern/pmap.h>
 #include <kern/traceopt.h>
 #include <kern/vsyscall.h>
+
 
 /* Currently active environment */
 struct Env *curenv = NULL;
@@ -117,7 +119,16 @@ env_init(void) {
         envs[NENV - i - 1].env_id = 0;
         envs[NENV - i - 1].env_link = env_free_list;
         env_free_list = &envs[NENV - i - 1];
+        /*Signals*/
+        for (int j = 0; j < NUM_SIG; j++){
+            envs[NENV - i - 1].Sig_Desc_Table[j].sa_handler = SIG_DFL;
+            envs[NENV - i - 1].Sig_Desc_Table[j].sa_mask = 0;
+            envs[NENV - i - 1].Sig_Desc_Table[j].sa_flags = 0;
+            envs[NENV - i - 1].Sig_Desc_Table[j].sa_sigaction = NULL;
+        }
     }
+
+
 }
 
 /* Allocates and initializes a new environment.
