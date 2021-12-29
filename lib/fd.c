@@ -1,17 +1,6 @@
 #include <inc/lib.h>
 
-/* Maximum number of file descriptors a program may hold open concurrently */
-#define MAXFD 32
-/* Bottom of file descriptor area */
-#define FDTABLE 0xD0000000LL
-/* Bottom of file data area.  We reserve one data page for each FD,
- * which devices can use if they choose. */
-#define FILEDATA (FDTABLE + MAXFD * PAGE_SIZE)
 
-/* Return the 'struct Fd*' for file descriptor index i */
-#define INDEX2FD(i) ((struct Fd *)(FDTABLE + (i)*PAGE_SIZE))
-/* Return the file data page for file descriptor index i */
-#define INDEX2DATA(i) ((char *)(FILEDATA + (i)*PAGE_SIZE))
 
 
 /********************File descriptor manipulators***********************/
