@@ -42,7 +42,7 @@ E_FIFO_CLOSE = 21,	/* No readers or writers of Fifo */
  -- добавляем функции `serve_create_fifo, serve_read_fifo, serve_write_fifo, serve_stat_fifo, serve_close_fifo`  
  -- добавляем запросы fifo в handler в конце fs/serv.c  
 
- * прописываем логику FIFO в lib/fifo.c (код поход на file.c)
+ * прописываем логику FIFO в lib/fifo.c (код похож на file.c)
 
  * пишем пользовательскую программу, создающую FIFO в user/mkfifo.c
 
