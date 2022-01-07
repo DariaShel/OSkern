@@ -33,16 +33,16 @@ struct Stat {
 
  * inc/error.h добавляем коды ошибок
  ```
-    E_FIFO = 20,	/* Fifo wait */
-	E_FIFO_CLOSE = 21,	/* No readers or writers of Fifo */
+E_FIFO = 20,	/* Fifo wait */
+E_FIFO_CLOSE = 21,	/* No readers or writers of Fifo */
  ```
- 
- * в serve.c
-  -- небольшие езменения в `serve_open()` и `serve_stat()`
-  -- добавляем функции `serve_create_fifo, serve_read_fifo, serve_write_fifo, serve_stat_fifo, serve_close_fifo`
-  -- добавляем запросы fifo в handler в конце fs/serv.c
 
- * прописываем логику FIFO в lib/fifo.c (код поход на file.c)
+ * в fs/serv.c  
+ -- небольшие изменения в `serve_open()` и `serve_stat()`  
+ -- добавляем функции `serve_create_fifo, serve_read_fifo, serve_write_fifo, serve_stat_fifo, serve_close_fifo`  
+ -- добавляем запросы fifo в handler в конце fs/serv.c  
+
+ * прописываем логику FIFO в lib/fifo.c (код похож на file.c)
 
  * пишем пользовательскую программу, создающую FIFO в user/mkfifo.c
 
