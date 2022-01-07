@@ -2,17 +2,6 @@
 #include <inc/string.h>
 #include <inc/lib.h>
 
-#ifdef MIN
-#undef MIN
-#endif
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-#ifdef debug
-#undef debug
-#endif
-
-#define debug 0
-
 union Fsipc fsipcbuf_fifo __attribute__((aligned(PAGE_SIZE)));
 
 static int
@@ -21,7 +10,7 @@ fsipc_fifo(unsigned type, void *dstva)
 	static envid_t fsenv;
 	if (fsenv == 0) fsenv = ipc_find_env(ENV_TYPE_FS);
 
-	// static_assert(sizeof(fsipcbuf) == PAGE_SIZE, "Invalid fsipcbuf size");
+	// static_assert(sizeof(fsipcbuf_fifo) == PAGE_SIZE, "Invalid fsipcbuf size");
 
 	if (debug)
 		cprintf("[%08x] fsipc %d %08x\n", thisenv->env_id, type, *(uint32_t *)&fsipcbuf_fifo);
@@ -114,11 +103,10 @@ devfifo_write(struct Fd *fd, const void *buf, size_t n)
 
 	int buf_size = sizeof(fsipcbuf_fifo.write_fifo.req_buf);
 
-	while(1){
+	while(1) {
 
 		fsipcbuf_fifo.write_fifo.req_fileid = fd->fd_file.id;
 		fsipcbuf_fifo.write_fifo.req_n = MIN((n - res), buf_size);
-
 		memmove(fsipcbuf_fifo.write_fifo.req_buf, 
 		        buf + res, 
 				MIN((n - res), buf_size));
@@ -140,8 +128,8 @@ devfifo_write(struct Fd *fd, const void *buf, size_t n)
 		}
 
 		res += r;
-		if (res == n){
-		  break;
+		if (res >= n){
+			break;
 		}
 	}
 

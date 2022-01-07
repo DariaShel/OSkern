@@ -16,7 +16,7 @@ fsipc(unsigned type, void *dstva) {
 
     if (!fsenv) fsenv = ipc_find_env(ENV_TYPE_FS);
 
-    static_assert(sizeof(fsipcbuf) == PAGE_SIZE, "Invalid fsipcbuf size");
+    // static_assert(sizeof(fsipcbuf) == PAGE_SIZE, "Invalid fsipcbuf size");
 
     if (debug) {
         cprintf("[%08x] fsipc %d %08x\n",
@@ -138,7 +138,7 @@ devfile_write(struct Fd *fd, const void *buf, size_t n) {
 	fsipcbuf.write.req_fileid = fd->fd_file.id;
     fsipcbuf.write.req_n = n;
     memmove(fsipcbuf.write.req_buf, buf, MIN(sizeof(fsipcbuf.write.req_buf), n));
-    int write= fsipc(FSREQ_WRITE, NULL);
+    int write = fsipc(FSREQ_WRITE, NULL);
     if (write < 0) {
 		return write;
 	}
