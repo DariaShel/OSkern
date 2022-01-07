@@ -37,7 +37,7 @@ struct Stat {
 	E_FIFO_CLOSE = 21,	/* No readers or writers of Fifo */
  ```
 
- * в serve.c 
+ * в serve.c  
  -- небольшие изменения в `serve_open()` и `serve_stat()`  
  -- добавляем функции `serve_create_fifo, serve_read_fifo, serve_write_fifo, serve_stat_fifo, serve_close_fifo`  
  -- добавляем запросы fifo в handler в конце fs/serv.c  
