@@ -11,7 +11,6 @@ r = Runner(save("jos.out"),
 def test_testfifo():
     r.user_test("testfifo", timeout=100)
 
-    r.show_qemu_output()
     r.match("fifo creation is successful")
     r.match("fifo repeated creation is successful")
     r.match("writing into fifo is successful")

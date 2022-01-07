@@ -13,8 +13,8 @@ umain(int argc, char **argv)
 
 	cprintf("testing fifo...\n");
 
-	cprintf("fifo creation ");
 	r = mkfifo(path_fifo);
+	cprintf("fifo creation ");
 	if ((r == 0) || (r == -E_FILE_EXISTS))
 		// после перезагрузки qemu фаил сохраняется, 
 		// поэтому он может уже существовать
