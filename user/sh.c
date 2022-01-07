@@ -265,8 +265,6 @@ umain(int argc, char **argv) {
     int r, interactive, echocmds;
     struct Argstate args;
 
-    cprintf("111111111111\n");
-
     interactive = '?';
     echocmds = 0;
     argstart(&argc, argv, &args);
