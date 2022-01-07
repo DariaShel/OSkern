@@ -44,6 +44,11 @@ sys_getenvid(void) {
     return curenv->env_id;
 }
 
+static envid_t
+sys_get_parent_envid(void) {
+    return curenv->env_parent_id;
+}
+
 /* Destroy a given environment (possibly the currently running environment).
  *
  *  Returns 0 on success, < 0 on error.  Errors are:
@@ -435,23 +440,6 @@ sys_region_refs(uintptr_t addr, size_t size, uintptr_t addr2, uintptr_t size2) {
     return region_maxref(current_space, addr, size) - region_maxref(current_space, addr2, size2);
 }
 
-int terminate_process(int eid){
-    return sys_env_destroy(eid);
-}
-
-int call_process_handler(struct Env* env, int signo){
-    struct AddressSpace *old = switch_address_space(&env->address_space);
-    env->env_tf.tf_regs.reg_rdi = signo; // единственный параметр функции-обработчика
-    *((uint64_t *)(env->env_tf.tf_rsp - 8)) = 0;
-    *((uint64_t *)(env->env_tf.tf_rsp - 16)) = env->env_tf.tf_rip;
-    env->env_tf.tf_rsp = env->env_tf.tf_rsp - 16;
-    env->env_tf.tf_rip = (uintptr_t)env->Sig_Desc_Table[signo].sa_handler;
-    switch_address_space(old);
-
-    return 0;
-}
-
-
 int
 sys_sigqueue(int eid, int signo, const union sigval value){
     struct Env* env = NULL;
@@ -459,13 +447,15 @@ sys_sigqueue(int eid, int signo, const union sigval value){
         return -E_BAD_ENV;
     }
 
-    if (env->Sig_Desc_Table[signo].sa_handler == SIG_DFL){
-        return terminate_process(eid);
-    } else if (env->Sig_Desc_Table[signo].sa_handler == SIG_IGN) {
-        return 0;
+    if (env->que_members_num == MAX_QUEUE_LEN){
+        return -1;
     } else{
-        return call_process_handler(env, signo);
+        env->queue[(env->que_start_position + env->que_members_num) / MAX_QUEUE_LEN].signo = signo;
+        env->queue[(env->que_start_position + env->que_members_num) / MAX_QUEUE_LEN].sigvalue = value;
+        env->que_members_num = env->que_members_num + 1;
     }
+
+    return 0;
 }
 
 int
@@ -503,6 +493,8 @@ syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t
         return sys_cgetc();
     } else if (syscallno == SYS_getenvid) {
         return sys_getenvid();
+    } else if (syscallno == SYS_get_parent_envid) {
+        return sys_get_parent_envid();
     } else if (syscallno == SYS_env_destroy) {
         return sys_env_destroy((envid_t)a1);
     } else if (syscallno == SYS_alloc_region) {

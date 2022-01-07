@@ -61,6 +61,12 @@ sys_getenvid(void) {
     return syscall(SYS_getenvid, 0, 0, 0, 0, 0, 0, 0);
 }
 
+envid_t
+sys_get_parent_envid(void) {
+    return syscall(SYS_get_parent_envid, 0, 0, 0, 0, 0, 0, 0);
+}
+
+
 void
 sys_yield(void) {
     syscall(SYS_yield, 0, 0, 0, 0, 0, 0, 0);

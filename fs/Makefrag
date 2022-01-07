@@ -31,7 +31,8 @@ USERAPPS :=		$(OBJDIR)/user/init \
 			$(OBJDIR)/user/testshell \
 			$(OBJDIR)/user/hello \
 			$(OBJDIR)/user/date \
-			$(OBJDIR)/user/vdate \
+			$(OBJDIR)/user/vdate   \
+            $(OBJDIR)/user/sig_test
 
 
 FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS)

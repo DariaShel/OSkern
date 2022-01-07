@@ -37,7 +37,8 @@ enum {
     ENV_DYING,
     ENV_RUNNABLE,
     ENV_RUNNING,
-    ENV_NOT_RUNNABLE
+    ENV_NOT_RUNNABLE,
+    ENV_WAITING_SIGNAL
 };
 
 /* Special environment types */
@@ -56,6 +57,11 @@ struct AddressSpace {
     pml4e_t *pml4;     /* Virtual address of pml4 */
     uintptr_t cr3;     /* Physical address of pml4 */
     struct Page *root; /* root node of address space tree */
+};
+
+struct sigque_member {
+    int signo;
+    union sigval sigvalue;
 };
 
 
@@ -85,7 +91,11 @@ struct Env {
     int env_ipc_perm;        /* Perm of page mapping received */
 
     /*Signals*/
-    struct sigaction Sig_Desc_Table[NUM_SIG];
+    struct sigaction Sig_Desc_Table[NUM_SIG]; // таблица структур с обработчиками для каждого сигнала
+    struct sigque_member queue[MAX_QUEUE_LEN];      // очередь сигналов
+    int que_members_num;                      // количество сигналов в очереди
+    int que_start_position;                 // позиция, на которой начинается очередь
+    int sig_handling;
 };
 
 #endif /* !JOS_INC_ENV_H */

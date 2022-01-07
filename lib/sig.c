@@ -3,6 +3,14 @@
 //
 #include <inc/lib.h>
 
+void sig_ign(int arg){
+    ;
+}
+
+void sig_dfl(int arg){
+    ;
+}
+
 int
 sigqueue(int eid, int signo, const union sigval value){
     return sys_sigqueue(eid, signo, value);

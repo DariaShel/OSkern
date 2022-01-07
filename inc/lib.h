@@ -80,6 +80,7 @@ char *readline(const char *buf);
 void sys_cputs(const char *string, size_t len);
 int sys_cgetc(void);
 envid_t sys_getenvid(void);
+envid_t sys_get_parent_envid(void);
 int sys_env_destroy(envid_t);
 void sys_yield(void);
 int sys_region_refs(void *va, size_t size);

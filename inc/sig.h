@@ -16,11 +16,18 @@ enum sig_nums {
     NUM_SIG
 };
 
+enum sig_handling {
+    ENV_NOT_HANDLING_SIG = 0,
+    ENV_HANDLING_SIG
+};
+
 void sig_ign(int);
 void sig_dfl(int);
 
 #define SIG_DFL &sig_dfl
 #define SIG_IGN &sig_ign
+
+#define MAX_QUEUE_LEN 20
 
 union sigval{
     int sival_int;

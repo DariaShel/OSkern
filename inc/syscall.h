@@ -6,6 +6,7 @@ enum {
     SYS_cputs = 0,
     SYS_cgetc,
     SYS_getenvid,
+    SYS_get_parent_envid,
     SYS_env_destroy,
     SYS_alloc_region,
     SYS_map_region,

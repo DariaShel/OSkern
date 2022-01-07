@@ -125,6 +125,9 @@ env_init(void) {
             envs[NENV - i - 1].Sig_Desc_Table[j].sa_mask = 0;
             envs[NENV - i - 1].Sig_Desc_Table[j].sa_flags = 0;
             envs[NENV - i - 1].Sig_Desc_Table[j].sa_sigaction = NULL;
+            envs[NENV - i - 1].que_members_num = 0;
+            envs[NENV - i - 1].que_start_position = 0;
+            envs[NENV - i - 1].sig_handling = ENV_NOT_HANDLING_SIG;
         }
     }
 
@@ -476,6 +479,16 @@ env_pop_tf(struct Trapframe *tf) {
  *    and make sure you have set the relevant parts of
  *    env->env_tf to sensible values.
  */
+
+int prepare_tf_for_calling_handler(struct Env* env, int signo){
+    env->env_tf.tf_regs.reg_rdi = signo; // единственный параметр функции-обработчика
+    *((uint64_t *)(env->env_tf.tf_rsp - 8)) = 0;
+    *((uint64_t *)(env->env_tf.tf_rsp - 16)) = env->env_tf.tf_rip;
+    env->env_tf.tf_rsp = env->env_tf.tf_rsp - 16;
+    env->env_tf.tf_rip = (uintptr_t)env->Sig_Desc_Table[signo].sa_handler;
+    return 0;
+}
+
 _Noreturn void
 env_run(struct Env *env) {
     assert(env);
@@ -497,6 +510,26 @@ env_run(struct Env *env) {
     curenv->env_status = ENV_RUNNING;
     curenv->env_runs++;
     switch_address_space(&curenv->address_space);
+
+    // Signals. If there are some signal in the queue, then start process running from handlers.
+    if (curenv->que_members_num != 0 && curenv->sig_handling == ENV_NOT_HANDLING_SIG){
+        curenv->sig_handling = ENV_HANDLING_SIG;
+        int signo = curenv->queue[curenv->que_start_position].signo;
+        if (curenv->Sig_Desc_Table[signo].sa_handler == SIG_DFL) { // стандартная обработка -- прервать процесс
+            env_destroy(curenv);
+            sched_yield();
+        } else if (curenv->Sig_Desc_Table[signo].sa_handler == SIG_IGN) { // игнорировать процесс
+            ;
+        } else {
+            if (prepare_tf_for_calling_handler(curenv, signo)  != 0){ // подготовиться к вызову функции-обработчика
+                panic("Calling handler ended with error :(");
+            }
+        }
+        // сдвинуть очередь
+        curenv->que_start_position++;
+        curenv->que_members_num--;
+    }
+
 	env_pop_tf(&curenv->env_tf);
 	
     while(1) {}
