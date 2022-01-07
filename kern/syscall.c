@@ -1,5 +1,7 @@
 /* See COPYRIGHT for copyright information. */
 
+#include <inc/sig.h>
+
 #include <inc/x86.h>
 #include <inc/error.h>
 #include <inc/string.h>
@@ -40,6 +42,11 @@ static envid_t
 sys_getenvid(void) {
     // LAB 8: Your code here
     return curenv->env_id;
+}
+
+static envid_t
+sys_get_parent_envid(void) {
+    return curenv->env_parent_id;
 }
 
 /* Destroy a given environment (possibly the currently running environment).
@@ -433,6 +440,45 @@ sys_region_refs(uintptr_t addr, size_t size, uintptr_t addr2, uintptr_t size2) {
     return region_maxref(current_space, addr, size) - region_maxref(current_space, addr2, size2);
 }
 
+int
+sys_sigqueue(int eid, int signo, const union sigval value){
+    struct Env* env = NULL;
+    if (envid2env(eid, &env, false) < 0) {
+        return -E_BAD_ENV;
+    }
+
+    if (env->que_members_num == MAX_QUEUE_LEN){
+        return -1;
+    } else{
+        env->queue[(env->que_start_position + env->que_members_num) % MAX_QUEUE_LEN].signo = signo;
+        env->queue[(env->que_start_position + env->que_members_num) % MAX_QUEUE_LEN].sigvalue = value;
+        env->que_members_num = env->que_members_num + 1;
+    }
+
+    return 0;
+}
+
+int
+sys_sigwait(const sigset_t* set, int sig){
+    curenv->env_status = ENV_WAITING_SIGNAL;
+    curenv->waiting_signal = sig;
+    return 0;
+}
+
+int
+sys_sigaction(int sig, const struct sigaction* act, struct sigaction* oact){
+
+    if (oact != NULL){
+        memcpy(oact, &curenv->Sig_Desc_Table[sig], sizeof(struct sigaction));
+    }
+
+    if (act != NULL){
+        memcpy(&curenv->Sig_Desc_Table[sig], act, sizeof(struct sigaction));
+    }
+
+    return 0;
+}
+
 /* Dispatches to the correct kernel function, passing the arguments. */
 uintptr_t
 syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5, uintptr_t a6) {
@@ -449,6 +495,8 @@ syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t
         return sys_cgetc();
     } else if (syscallno == SYS_getenvid) {
         return sys_getenvid();
+    } else if (syscallno == SYS_get_parent_envid) {
+        return sys_get_parent_envid();
     } else if (syscallno == SYS_env_destroy) {
         return sys_env_destroy((envid_t)a1);
     } else if (syscallno == SYS_alloc_region) {
@@ -476,6 +524,12 @@ syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t
         return sys_env_set_trapframe((envid_t)a1, (struct Trapframe *)a2);
 	} else if (syscallno == SYS_gettime) {
         return sys_gettime();
+    } else if (syscallno == SYS_sigqueue){
+        return sys_sigqueue((int)a1, (int)a2, (const union sigval)(void *)a3);
+    } else if (syscallno == SYS_sigwait){
+        return sys_sigwait((const sigset_t*)a1, (int)a2);
+    } else if (syscallno == SYS_sigaction){
+        return sys_sigaction((int)a1, (const struct sigaction*)a2, (struct sigaction*)a3);
     }
     return -E_NO_SYS;
 }

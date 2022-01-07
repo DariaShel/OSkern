@@ -21,6 +21,7 @@
 /* Return the file data page for file descriptor index i */
 #define INDEX2DATA(i) ((char *)(FILEDATA + (i)*PAGE_SIZE))
 
+
 struct Fd;
 struct Stat;
 struct Dev;

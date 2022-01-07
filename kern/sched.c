@@ -7,6 +7,35 @@
 struct Taskstate cpu_ts;
 _Noreturn void sched_halt(void);
 
+int check_signal_in_queue(int cur_id){
+    int i = envs[cur_id].que_start_position;
+    int num = 0;
+    while (i < MAX_QUEUE_LEN && i < envs[cur_id].que_start_position + envs[cur_id].que_members_num){
+        if (envs[cur_id].queue[i].signo == envs[cur_id].waiting_signal){
+            envs[cur_id].env_status = ENV_RUNNABLE;
+            envs[cur_id].que_start_position = (envs[cur_id].que_start_position + num) % MAX_QUEUE_LEN;
+            envs[cur_id].que_members_num -= num;
+            return i;
+        }
+        i++;
+        num++;
+    }
+    if (i == MAX_QUEUE_LEN - 1 && envs[cur_id].que_start_position + envs[cur_id].que_members_num > MAX_QUEUE_LEN - 1){
+        i = 0;
+        while (i < (envs[cur_id].que_start_position + envs[cur_id].que_members_num) % MAX_QUEUE_LEN){
+            if (envs[cur_id].queue[i].signo == envs[cur_id].waiting_signal){
+                envs[cur_id].env_status = ENV_RUNNABLE;
+                envs[cur_id].que_start_position = (envs[cur_id].que_start_position + num) % MAX_QUEUE_LEN;
+                envs[cur_id].que_members_num -= num;
+                return i;
+            }
+            i++;
+            num++;
+        }
+    }
+    return -1;
+}
+
 /* Choose a user environment to run and run it */
 _Noreturn void
 sched_yield(void) {
@@ -34,6 +63,10 @@ sched_yield(void) {
 	parent_id = cur_id;
 	while (1) {
 		cur_id = (cur_id + 1) % NENV;
+        if (envs[cur_id].env_status == ENV_WAITING_SIGNAL){
+            check_signal_in_queue(cur_id);
+        }
+
 		if (envs[cur_id].env_status == ENV_RUNNABLE) {
 			env_run(&envs[cur_id]);
 		}
