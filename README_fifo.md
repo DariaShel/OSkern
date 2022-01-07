@@ -33,8 +33,8 @@ struct Stat {
 
  * inc/error.h добавляем коды ошибок
  ```
-    E_FIFO       = 19, // Fifo wait
-    E_FIFO_CLOSE  = 20, // No readers or writers of Fifo
+    E_FIFO = 19, // Fifo wait
+    E_FIFO_CLOSE = 20, // No readers or writers of Fifo
  ```
  
  * в serve.c
