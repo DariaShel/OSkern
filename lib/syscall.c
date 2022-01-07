@@ -161,7 +161,7 @@ sys_sigqueue(int eid, int signo, const union sigval value){
 }
 
 int
-sys_sigwait(const sigset_t* set, int* sig){
+sys_sigwait(const sigset_t* set, int sig){
     return syscall(SYS_sigwait, 0, (uintptr_t)set, (uintptr_t)sig, 0, 0, 0, 0);
 }
 

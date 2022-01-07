@@ -95,7 +95,7 @@ struct Env {
     struct sigque_member queue[MAX_QUEUE_LEN];      // очередь сигналов
     int que_members_num;                      // количество сигналов в очереди
     int que_start_position;                 // позиция, на которой начинается очередь
-    int sig_handling;
+    int waiting_signal;
 };
 
 #endif /* !JOS_INC_ENV_H */

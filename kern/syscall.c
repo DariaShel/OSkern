@@ -450,8 +450,8 @@ sys_sigqueue(int eid, int signo, const union sigval value){
     if (env->que_members_num == MAX_QUEUE_LEN){
         return -1;
     } else{
-        env->queue[(env->que_start_position + env->que_members_num) / MAX_QUEUE_LEN].signo = signo;
-        env->queue[(env->que_start_position + env->que_members_num) / MAX_QUEUE_LEN].sigvalue = value;
+        env->queue[(env->que_start_position + env->que_members_num) % MAX_QUEUE_LEN].signo = signo;
+        env->queue[(env->que_start_position + env->que_members_num) % MAX_QUEUE_LEN].sigvalue = value;
         env->que_members_num = env->que_members_num + 1;
     }
 
@@ -459,8 +459,10 @@ sys_sigqueue(int eid, int signo, const union sigval value){
 }
 
 int
-sys_sigwait(const sigset_t* set, int* sig){
-    return 124;
+sys_sigwait(const sigset_t* set, int sig){
+    curenv->env_status = ENV_WAITING_SIGNAL;
+    curenv->waiting_signal = sig;
+    return 0;
 }
 
 int
@@ -525,7 +527,7 @@ syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t
     } else if (syscallno == SYS_sigqueue){
         return sys_sigqueue((int)a1, (int)a2, (const union sigval)(void *)a3);
     } else if (syscallno == SYS_sigwait){
-        return sys_sigwait((const sigset_t*)a1, (int*)a2);
+        return sys_sigwait((const sigset_t*)a1, (int)a2);
     } else if (syscallno == SYS_sigaction){
         return sys_sigaction((int)a1, (const struct sigaction*)a2, (struct sigaction*)a3);
     }

@@ -55,7 +55,7 @@ struct sigaction{
 
 
 int sigqueue(int eid, int signo, const union sigval value);
-int sigwait(const sigset_t* set, int* sig);
+int sigwait(const sigset_t* set, int sig);
 int sigaction(int sig, const struct sigaction* act, struct sigaction* oact);
 
 #endif // IZ_SIG_H

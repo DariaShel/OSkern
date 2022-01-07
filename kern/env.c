@@ -127,7 +127,6 @@ env_init(void) {
             envs[NENV - i - 1].Sig_Desc_Table[j].sa_sigaction = NULL;
             envs[NENV - i - 1].que_members_num = 0;
             envs[NENV - i - 1].que_start_position = 0;
-            envs[NENV - i - 1].sig_handling = ENV_NOT_HANDLING_SIG;
         }
     }
 
@@ -512,8 +511,8 @@ env_run(struct Env *env) {
     switch_address_space(&curenv->address_space);
 
     // Signals. If there are some signal in the queue, then start process running from handlers.
-    if (curenv->que_members_num != 0 && curenv->sig_handling == ENV_NOT_HANDLING_SIG){
-        curenv->sig_handling = ENV_HANDLING_SIG;
+    if (curenv->que_members_num != 0 /*&& curenv->sig_handling == ENV_NOT_HANDLING_SIG*/){
+        //curenv->sig_handling = ENV_HANDLING_SIG;
         int signo = curenv->queue[curenv->que_start_position].signo;
         if (curenv->Sig_Desc_Table[signo].sa_handler == SIG_DFL) { // стандартная обработка -- прервать процесс
             env_destroy(curenv);
@@ -521,6 +520,7 @@ env_run(struct Env *env) {
         } else if (curenv->Sig_Desc_Table[signo].sa_handler == SIG_IGN) { // игнорировать процесс
             ;
         } else {
+            cprintf("QUEUE SIZE: %d\n", curenv->que_members_num);
             if (prepare_tf_for_calling_handler(curenv, signo)  != 0){ // подготовиться к вызову функции-обработчика
                 panic("Calling handler ended with error :(");
             }

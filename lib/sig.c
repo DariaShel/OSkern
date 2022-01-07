@@ -17,7 +17,7 @@ sigqueue(int eid, int signo, const union sigval value){
 }
 
 int
-sigwait(const sigset_t* set, int* sig){
+sigwait(const sigset_t* set, int sig){
     return sys_sigwait(set, sig);
 }
 

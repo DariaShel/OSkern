@@ -98,7 +98,7 @@ int sys_ipc_recv(void *rcv_pg, size_t size);
 int sys_gettime(void);
 
 int sys_sigqueue(int pid, int signo, const union sigval value);
-int sys_sigwait(const sigset_t* set, int* sig);
+int sys_sigwait(const sigset_t* set, int sig);
 int sys_sigaction(int sig, const struct sigaction* act, struct sigaction* oact);
 
 int vsys_gettime(void);

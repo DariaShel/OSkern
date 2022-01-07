@@ -58,6 +58,8 @@ umain(int argc, char **argv) {
         cprintf("P. send signal 5\n");
         sigqueue(r, 1, (const union sigval)0);
 
+        wait(r);
         cprintf("P. ends\n");
+
     }
 }
