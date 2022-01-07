@@ -38,9 +38,9 @@ struct Stat {
  ```
  
  * в serve.c
-  -- небольшие езменения в `serve_open()` и `serve_stat()`
-  -- добавляем функции `serve_create_fifo, serve_read_fifo, serve_write_fifo, serve_stat_fifo, serve_close_fifo`
-  -- добавляем запросы fifo в handler в конце fs/serv.c
+ -- небольшие изменения в `serve_open()` и `serve_stat()`
+ -- добавляем функции `serve_create_fifo, serve_read_fifo, serve_write_fifo, serve_stat_fifo, serve_close_fifo`
+ -- добавляем запросы fifo в handler в конце fs/serv.c
 
  * прописываем логику FIFO в lib/fifo.c (код поход на file.c)
 
