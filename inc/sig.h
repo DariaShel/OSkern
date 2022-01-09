@@ -13,6 +13,7 @@ enum sig_nums {
     SIG0 = 0,
     SIG1,
     SIG2,
+    SIGPIPE,
     NUM_SIG
 };
 

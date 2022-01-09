@@ -37,7 +37,8 @@ USERAPPS :=		$(OBJDIR)/user/init \
 			$(OBJDIR)/user/process_fifo \
 			$(OBJDIR)/user/vdate   \
             $(OBJDIR)/user/sig_test \
-            $(OBJDIR)/user/waiting_test
+            $(OBJDIR)/user/waiting_test \
+            $(OBJDIR)/user/sigpipe_test
 
 
 FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS)

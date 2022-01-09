@@ -520,7 +520,7 @@ env_run(struct Env *env) {
         } else if (curenv->Sig_Desc_Table[signo].sa_handler == SIG_IGN) { // игнорировать процесс
             ;
         } else {
-            cprintf("QUEUE SIZE: %d\n", curenv->que_members_num);
+            cprintf("env_run(). signal queue size: %d\n", curenv->que_members_num);
             if (prepare_tf_for_calling_handler(curenv, signo)  != 0){ // подготовиться к вызову функции-обработчика
                 panic("Calling handler ended with error :(");
             }

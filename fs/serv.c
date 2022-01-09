@@ -347,13 +347,14 @@ serve_write_fifo(envid_t envid, union Fsipc *ipc)
 
 		if (debug) cprintf("write: %d of %d\tw_off: %d\n", i, n, fifo->fifo_w_offset);
 
+        cprintf("serve_write_fifo(). fifo->n_readers: %d\n", fifo->n_readers);
+        if (fifo->n_readers == 0){
+            return -E_FIFO_CLOSE;
+        }
+
         if (fifo->fifo_w_offset >= fifo->fifo_r_offset + FIFOBUFSIZ) {
             // buf is full
-
-			// no readers
-			if (fifo->n_readers == 0) return -E_FIFO_CLOSE;
-
-			// Wait until readers read something
+            // Wait until readers read something
 			return -E_FIFO;
 		}
 		fifo->fifo_buf[fifo->fifo_w_offset % FIFOBUFSIZ] = buf[i];
